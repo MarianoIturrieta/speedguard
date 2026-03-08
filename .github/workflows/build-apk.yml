@@ -24,12 +24,13 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Capacitor
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+      - name: Install Capacitor and dependencies
+        run: npm install
 
-      - name: Copy web assets
+      - name: Remove existing android folder and reinitialize
         run: |
+          rm -rf android
+          npx cap add android
           npx cap copy android
 
       - name: Make gradlew executable
