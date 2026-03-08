@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffb347">
+<link rel="manifest" href="manifest.json">
+<title>SpeedGuard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@200;400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --amber:#ffb347;
+  --amber-dim:#c27a1a;
+  --amber-glow:rgba(255,179,71,.18);
+  --red:#ff3b3b;
+  --red-glow:rgba(255,59,59,.22);
+  --green:#39ff8f;
+  --glass:rgba(255,255,255,.04);
+  --glass-border:rgba(255,255,255,.08);
+  --bg:#0a0c12;
+  --bg2:#0f1219;
+  --text:#e8dfc8;
+  --muted:rgba(232,223,200,.35);
+}
+
+html,body{
+  height:100%;width:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Exo 2',sans-serif;
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+
+/* ── Starfield / noise bg ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,179,71,.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255,59,59,.04) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:200px;
+  pointer-events:none;z-index:0;opacity:.6;
+}
+
+/* ── Layout ── */
+#app{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-rows:auto 1fr auto auto;
+  align-items:center;
+  height:100vh;
+  padding:env(safe-area-inset-top,20px) 20px env(safe-area-inset-bottom,20px);
+  gap:0;
+  max-width:420px;
+  margin:0 auto;
+}
+
+/* ── Header ── */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 0 8px;
+}
+.logo{
+  font-family:'Orbitron',monospace;
+  font-weight:900;
+  font-size:.85rem;
+  letter-spacing:.3em;
+  color:var(--amber);
+  text-shadow:0 0 12px var(--amber),0 0 30px rgba(255,179,71,.4);
+}
+.gps-badge{
+  display:flex;align-items:center;gap:7px;
+  font-size:.65rem;letter-spacing:.15em;
+  color:var(--muted);
+  font-family:'Orbitron',monospace;
+}
+.gps-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--muted);
+  transition:background .4s,box-shadow .4s;
+}
+.gps-dot.active{
+  background:var(--green);
+  box-shadow:0 0 8px var(--green),0 0 16px rgba(57,255,143,.4);
+  animation:pulse-dot 2s ease-in-out infinite;
+}
+
+/* ── Main speedometer area ── */
+#speedo-area{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+}
+
+/* ── Dial ── */
+#dial-container{
+  position:relative;
+  width:min(75vw,290px);
+  aspect-ratio:1;
+}
+
+#dial-svg{
+  width:100%;height:100%;
+  transform:rotate(-225deg);
+  overflow:visible;
+}
+
+.track{
+  fill:none;
+  stroke:rgba(255,179,71,.08);
+  stroke-width:8;
+  stroke-linecap:round;
+}
+.tick-marks{ fill:none; stroke:rgba(255,179,71,.15); stroke-width:1.5; }
+
+#arc-glow{
+  fill:none;
+  stroke:var(--amber);
+  stroke-width:10;
+  stroke-linecap:round;
+  opacity:.25;
+  stroke-dasharray:0 251;
+  transition:stroke-dasharray .45s cubic-bezier(.4,0,.2,1), stroke .3s;
+  filter:blur(4px);
+}
+#arc-main{
+  fill:none;
+  stroke:var(--amber);
+  stroke-width:5;
+  stroke-linecap:round;
+  stroke-dasharray:0 251;
+  transition:stroke-dasharray .45s cubic-bezier(.4,0,.2,1), stroke .3s;
+}
+
+/* dial inner */
+#dial-inner{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:2px;
+}
+
+#speed-int{
+  font-family:'Orbitron',monospace;
+  font-weight:900;
+  font-size:clamp(3.8rem,19vw,5.8rem);
+  line-height:1;
+  color:var(--amber);
+  text-shadow:0 0 20px rgba(255,179,71,.5),0 0 50px rgba(255,179,71,.2);
+  transition:color .3s,text-shadow .3s;
+  letter-spacing:-.02em;
+}
+#speed-unit{
+  font-family:'Orbitron',monospace;
+  font-size:.55rem;
+  letter-spacing:.35em;
+  color:var(--amber-dim);
+  margin-top:-2px;
+}
+
+/* glass ring behind dial */
+#dial-ring{
+  position:absolute;inset:-8px;
+  border-radius:50%;
+  border:1px solid var(--glass-border);
+  background:radial-gradient(circle, rgba(255,179,71,.03) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* ── Speed diff badge ── */
+#diff-badge{
+  font-family:'Orbitron',monospace;
+  font-size:.75rem;
+  letter-spacing:.1em;
+  height:22px;
+  margin-top:8px;
+  color:var(--muted);
+  transition:color .3s;
+}
+#diff-badge.over{ color:var(--red); text-shadow:0 0 10px var(--red); }
+#diff-badge.under{ color:var(--green); }
+
+/* ── Limit + Info cards ── */
+#cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  width:100%;
+  padding:16px 0 12px;
+}
+
+.card{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:12px;
+  padding:14px 16px;
+  display:flex;flex-direction:column;gap:6px;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  transition:border-color .3s,background .3s;
+}
+.card-label{
+  font-size:.55rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--muted);
+  font-family:'Orbitron',monospace;
+}
+.card-val{
+  font-family:'Orbitron',monospace;
+  font-size:1.6rem;
+  font-weight:700;
+  color:var(--amber);
+  line-height:1;
+  transition:color .3s;
+}
+.card-sub{
+  font-size:.6rem;
+  color:var(--muted);
+  letter-spacing:.1em;
+}
+
+/* limit sign overlay */
+#limit-card{ position:relative; overflow:hidden; }
+#limit-card::before{
+  content:'';
+  position:absolute;top:-30px;right:-20px;
+  width:80px;height:80px;
+  border-radius:50%;
+  border:3px solid rgba(255,179,71,.12);
+  pointer-events:none;
+}
+#limit-card::after{
+  content:'';
+  position:absolute;top:-24px;right:-14px;
+  width:68px;height:68px;
+  border-radius:50%;
+  border:2px solid rgba(255,59,59,.15);
+  pointer-events:none;
+}
+
+/* ── Status ── */
+#status-row{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:18px;margin-bottom:10px;
+}
+#status-text{
+  font-size:.62rem;
+  letter-spacing:.12em;
+  color:var(--muted);
+  text-align:center;
+  text-transform:uppercase;
+  font-family:'Exo 2',sans-serif;
+}
+
+/* ── Start button ── */
+#btn-start{
+  width:100%;
+  padding:17px 0;
+  border-radius:12px;
+  border:1.5px solid rgba(255,179,71,.4);
+  background:rgba(255,179,71,.06);
+  color:var(--amber);
+  font-family:'Orbitron',monospace;
+  font-weight:700;
+  font-size:.85rem;
+  letter-spacing:.35em;
+  text-transform:uppercase;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  transition:border-color .3s,background .3s,box-shadow .3s;
+  margin-bottom:4px;
+}
+#btn-start::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,179,71,.08) 0%,transparent 60%);
+  pointer-events:none;
+}
+#btn-start:active{
+  background:rgba(255,179,71,.12);
+  box-shadow:0 0 24px rgba(255,179,71,.25),inset 0 0 12px rgba(255,179,71,.06);
+}
+#btn-start.running{
+  border-color:rgba(255,59,59,.5);
+  background:rgba(255,59,59,.06);
+  color:var(--red);
+}
+#btn-start.running:active{
+  background:rgba(255,59,59,.12);
+  box-shadow:0 0 24px rgba(255,59,59,.25);
+}
+
+/* ── Alert state ── */
+body.alert-on #speed-int{
+  color:var(--red);
+  text-shadow:0 0 20px rgba(255,59,59,.7),0 0 50px rgba(255,59,59,.3);
+  animation:shake .08s ease-in-out infinite;
+}
+body.alert-on #arc-main{ stroke:var(--red); }
+body.alert-on #arc-glow{ stroke:var(--red); }
+body.alert-on .card#limit-card{
+  border-color:rgba(255,59,59,.35);
+  background:rgba(255,59,59,.06);
+}
+body.alert-on .card#limit-card .card-val{ color:var(--red); }
+
+/* ── Scan line ── */
+#scan{
+  position:fixed;
+  top:-60px;left:0;right:0;
+  height:60px;
+  background:linear-gradient(to bottom, transparent, rgba(255,179,71,.025), transparent);
+  pointer-events:none;
+  animation:scandown 6s linear infinite;
+  z-index:10;
+}
+
+/* ── Alert flash border ── */
+#flash-frame{
+  position:fixed;inset:0;
+  border:3px solid var(--red);
+  border-radius:0;
+  opacity:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 40px rgba(255,59,59,.2);
+  transition:opacity .15s;
+  z-index:20;
+}
+body.alert-on #flash-frame{ animation:flash-border .5s ease-in-out infinite; }
+
+/* ── Animations ── */
+@keyframes pulse-dot{
+  0%,100%{opacity:1} 50%{opacity:.4}
+}
+@keyframes scandown{
+  0%{top:-60px} 100%{top:100vh}
+}
+@keyframes flash-border{
+  0%,100%{opacity:0} 50%{opacity:1}
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-1px)}
+  75%{transform:translateX(1px)}
+}
+@keyframes fadein{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* entrance */
+header,#speedo-area,#cards,#status-row,#btn-start{
+  animation:fadein .6s ease both;
+}
+header{animation-delay:.05s}
+#speedo-area{animation-delay:.15s}
+#cards{animation-delay:.25s}
+#status-row{animation-delay:.3s}
+#btn-start{animation-delay:.35s}
+</style>
+</head>
+<body>
+
+<div id="scan"></div>
+<div id="flash-frame"></div>
+
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">SPEEDGUARD</div>
+    <div class="gps-badge">
+      <div class="gps-dot" id="gps-dot"></div>
+      <span id="gps-label">SIN GPS</span>
+    </div>
+  </header>
+
+  <!-- Speedometer -->
+  <div id="speedo-area">
+    <div id="dial-container">
+      <div id="dial-ring"></div>
+      <svg id="dial-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tick marks (270° sweep, 18 ticks) -->
+        <g id="ticks"></g>
+        <!-- Track -->
+        <circle class="track" cx="50" cy="50" r="40"
+          stroke-dasharray="188.5 62.8" stroke-linecap="round"/>
+        <!-- Glow arc -->
+        <circle id="arc-glow" cx="50" cy="50" r="40"/>
+        <!-- Main arc -->
+        <circle id="arc-main" cx="50" cy="50" r="40"/>
+      </svg>
+      <div id="dial-inner">
+        <div id="speed-int">0</div>
+        <div id="speed-unit">KM/H</div>
+      </div>
+    </div>
+    <div id="diff-badge">–</div>
+  </div>
+
+  <!-- Cards -->
+  <div id="cards">
+    <div class="card" id="limit-card">
+      <div class="card-label">Límite</div>
+      <div class="card-val" id="limit-val">—</div>
+      <div class="card-sub" id="limit-sub">esperando GPS</div>
+    </div>
+    <div class="card" id="coord-card">
+      <div class="card-label">Precisión</div>
+      <div class="card-val" id="acc-val">—</div>
+      <div class="card-sub" id="road-type">sin señal</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div id="status-row">
+    <div id="status-text">presioná iniciar para comenzar</div>
+  </div>
+
+  <!-- Button -->
+  <button id="btn-start" onclick="toggle()">INICIAR</button>
+
+</div>
+
+<script>
+// ─── Build tick marks ─────────────────────────────────────────────────────────
+(function buildTicks(){
+  const g = document.getElementById('ticks');
+  const total = 18, sweep = 270, startDeg = 0;
+  for(let i=0;i<=total;i++){
+    const deg = startDeg + (sweep/total)*i;
+    const rad = deg*Math.PI/180;
+    const r1=43, r2=i%3===0?38:41;
+    const x1=50+r1*Math.cos(rad), y1=50+r1*Math.sin(rad);
+    const x2=50+r2*Math.cos(rad), y2=50+r2*Math.sin(rad);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1);line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+    line.setAttribute('stroke',i%3===0?'rgba(255,179,71,.3)':'rgba(255,179,71,.12)');
+    line.setAttribute('stroke-width',i%3===0?'1.2':'0.8');
+    g.appendChild(line);
+  }
+})();
+
+// ─── Refs ─────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const speedEl  = $('speed-int');
+const arcMain  = $('arc-main');
+const arcGlow  = $('arc-glow');
+const limitEl  = $('limit-val');
+const limitSub = $('limit-sub');
+const accEl    = $('acc-val');
+const roadEl   = $('road-type');
+const statusEl = $('status-text');
+const diffEl   = $('diff-badge');
+const gpsDot   = $('gps-dot');
+const gpsLabel = $('gps-label');
+const btn      = $('btn-start');
+
+// arc geometry: r=40, 270° sweep → arc = 2π×40×(270/360) = 188.5
+const ARC_FULL = 188.5;
+const ARC_CIRC = 251.3;
+const MAX_SPD  = 180;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let running=false, watchId=null, audioCtx=null, alertOn=false, beepInterval=null;
+let cachedLimit=null, lastLL=null;
+const REDIST=150; // metres before re-querying
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
+function toggle(){
+  // AudioContext MUST be created/resumed on a direct user gesture (iOS/Android requirement)
+  if(!audioCtx) audioCtx = new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  running ? stopAll() : startAll();
+}
+function startAll(){
+  if(!navigator.geolocation){ setStatus('GPS no disponible.'); return; }
+  running=true;
+  btn.textContent='DETENER'; btn.classList.add('running');
+  setStatus('buscando señal GPS…');
+  watchId=navigator.geolocation.watchPosition(onPos, onErr,
+    {enableHighAccuracy:true, maximumAge:800, timeout:12000});
+}
+function stopAll(){
+  running=false;
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  watchId=null;
+  stopAlert();
+  setSpeedUI(0);
+  btn.textContent='INICIAR'; btn.classList.remove('running');
+  gpsDot.classList.remove('active'); gpsLabel.textContent='SIN GPS';
+  diffEl.textContent='–'; diffEl.className='';
+  setStatus('detenido — presioná iniciar para comenzar');
+}
+
+// ─── GPS ──────────────────────────────────────────────────────────────────────
+function onPos(pos){
+  const {latitude:lat, longitude:lon, speed:spd, accuracy:acc} = pos.coords;
+  const kmh = Math.round((spd??0)*3.6);
+
+  gpsDot.classList.add('active');
+  gpsLabel.textContent = 'GPS OK';
+  accEl.textContent = Math.round(acc)+'m';
+  roadEl.textContent = 'precisión GPS';
+
+  setSpeedUI(kmh);
+  updateDiff(kmh);
+
+  if(!lastLL || dist(lat,lon,lastLL.lat,lastLL.lon)>REDIST){
+    lastLL={lat,lon};
+    queryOSM(lat,lon);
+  }
+  if(cachedLimit!==null){
+    kmh>cachedLimit ? activateAlert() : stopAlert();
+    setStatus(kmh>cachedLimit
+      ? `⚠ excedés el límite en ${kmh-cachedLimit} km/h`
+      : `dentro del límite · ${cachedLimit-kmh} km/h de margen`);
+  }
+}
+function onErr(e){ setStatus('error GPS: '+e.message); }
+
+// ─── OSM ──────────────────────────────────────────────────────────────────────
+async function queryOSM(lat,lon){
+  setStatus('actualizando límite de velocidad…');
+  const q=`[out:json][timeout:6];way(around:30,${lat},${lon})[highway][maxspeed];out tags 1;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(q));
+    const j=await r.json();
+    if(j.elements.length){
+      const raw=j.elements[0].tags.maxspeed;
+      const hw=j.elements[0].tags.highway||'';
+      roadEl.textContent=hw||'vía';
+      const v=parseLimit(raw);
+      if(v){ setLimit(v,'OSM'); return; }
+    }
+    await fallbackOSM(lat,lon);
+  }catch(e){ setStatus('sin conexión — límite no disponible'); }
+}
+async function fallbackOSM(lat,lon){
+  const q=`[out:json][timeout:6];way(around:30,${lat},${lon})[highway];out tags 1;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(q));
+    const j=await r.json();
+    if(j.elements.length){
+      const hw=j.elements[0].tags.highway;
+      roadEl.textContent=hw||'vía';
+      setLimit(defaultLim(hw),'estimado');
+    }
+  }catch(_){}
+}
+function setLimit(v,src){
+  cachedLimit=v;
+  limitEl.textContent=v;
+  limitSub.textContent=src==='OSM'?'dato OSM':'estimado por vía';
+}
+
+function parseLimit(raw){
+  if(!raw)return null;
+  const imp={'IT:urban':50,'IT:rural':90,'IT:motorway':130,'urban':50,'rural':90,'motorway':130,'walk':10,'living_street':10};
+  if(imp[raw])return imp[raw];
+  const n=parseInt(raw);
+  if(!isNaN(n)) return raw.toLowerCase().includes('mph')?Math.round(n*1.609):n;
+  return null;
+}
+function defaultLim(hw){
+  return({motorway:130,motorway_link:130,trunk:110,trunk_link:110,primary:90,primary_link:90,secondary:70,tertiary:50,residential:30,living_street:10,service:10}[hw]??50);
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function setSpeedUI(kmh){
+  speedEl.textContent=kmh;
+  const f=Math.min(kmh/MAX_SPD,1);
+  const used=f*ARC_FULL;
+  const gap=ARC_CIRC-used;
+  arcMain.setAttribute('stroke-dasharray',`${used} ${gap}`);
+  arcGlow.setAttribute('stroke-dasharray',`${used} ${gap}`);
+}
+function updateDiff(kmh){
+  if(cachedLimit===null){ diffEl.textContent='–'; diffEl.className=''; return; }
+  const d=kmh-cachedLimit;
+  if(d>0){ diffEl.textContent=`+${d} km/h sobre el límite`; diffEl.className='over'; }
+  else if(d<0){ diffEl.textContent=`${Math.abs(d)} km/h de margen`; diffEl.className='under'; }
+  else{ diffEl.textContent='en el límite exacto'; diffEl.className=''; }
+}
+function setStatus(t){ statusEl.textContent=t; }
+
+// ─── Audio alert ──────────────────────────────────────────────────────────────
+function beep(){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const g   = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  g.gain.setValueAtTime(0, audioCtx.currentTime);
+  g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.04);
+  g.gain.linearRampToValueAtTime(0,   audioCtx.currentTime + 0.22);
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.25);
+}
+function activateAlert(){
+  if(alertOn || !audioCtx) return;
+  alertOn=true;
+  document.body.classList.add('alert-on');
+  beep();
+  beepInterval = setInterval(beep, 420);
+}
+function stopAlert(){
+  if(!alertOn) return;
+  alertOn=false;
+  document.body.classList.remove('alert-on');
+  clearInterval(beepInterval);
+  beepInterval=null;
+}
+
+// ─── Service Worker (PWA) ─────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () =>
+    navigator.serviceWorker.register('./sw.js')
+  );
+}
+
+function dist(a,b,c,d){
+  const R=6371000,r=Math.PI/180;
+  const dLat=(c-a)*r, dLon=(d-b)*r;
+  const x=Math.sin(dLat/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+</script>
+</body>
+</html>
