@@ -46,7 +46,7 @@ jobs:
           mkdir -p android/app/src/main/res/mipmap-anydpi-v26
           cp icons/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           cp icons/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-          cp icons/colors.xml android/app/src/main/res/values/colors.xml
+          rm -f android/app/src/main/res/values/ic_launcher_background.xml
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
