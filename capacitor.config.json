@@ -1,0 +1,17 @@
+{
+  "appId": "com.mariano.speedguard",
+  "appName": "SpeedGuard",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0a0c12"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
