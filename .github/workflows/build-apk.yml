@@ -24,14 +24,29 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Capacitor and dependencies
+      - name: Install Capacitor and Geolocation plugin
         run: npm install
 
-      - name: Remove existing android folder and reinitialize
+      - name: Initialize Android project
         run: |
           rm -rf android
           npx cap add android
           npx cap copy android
+
+      - name: Copy custom icons into Android project
+        run: |
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            src="icons/mipmap-${density}"
+            dst="android/app/src/main/res/mipmap-${density}"
+            mkdir -p "$dst"
+            cp "$src/ic_launcher.png"            "$dst/ic_launcher.png"
+            cp "$src/ic_launcher_round.png"      "$dst/ic_launcher_round.png"
+            cp "$src/ic_launcher_foreground.png" "$dst/ic_launcher_foreground.png"
+          done
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          cp icons/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          cp icons/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+          cp icons/colors.xml android/app/src/main/res/values/colors.xml
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
