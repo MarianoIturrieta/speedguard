@@ -32,6 +32,9 @@ jobs:
           rm -rf android
           npx cap add android
           npx cap copy android
+          # Inyectar permisos de ubicación en el manifest generado por Capacitor
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i 's|<uses-permission android:name="android.permission.INTERNET"/>|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>|' "$MANIFEST"
 
       - name: Copy custom icons into Android project
         run: |
@@ -44,7 +47,6 @@ jobs:
           done
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-          rm -f android/app/src/main/res/values/ic_launcher_background.xml
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -54,9 +56,12 @@ jobs:
           cd android
           ./gradlew assembleDebug --no-daemon
 
+      - name: Rename APK
+        run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/SpeedGuard.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: SpeedGuard-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/SpeedGuard.apk
           retention-days: 30
