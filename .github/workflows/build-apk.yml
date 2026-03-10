@@ -33,8 +33,14 @@ jobs:
           npx cap add android
           npx cap copy android
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i 's|<uses-permission android:name="android.permission.INTERNET"/>|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>|' "$MANIFEST"
+          sed -i 's|<uses-permission android:name="android.permission.INTERNET"/>|<uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>|' "$MANIFEST"
+          sed -i 's|</application>|    <service android:name=".LocationService" android:enabled="true" android:exported="false" android:foregroundServiceType="location"/>\n    </application>|' "$MANIFEST"
           cp native/MainActivity.java android/app/src/main/java/com/mariano/speedguard/MainActivity.java
+          cp native/LocationService.java android/app/src/main/java/com/mariano/speedguard/LocationService.java
+
+      - name: Add Google Play Services location dependency
+        run: |
+          sed -i "s|implementation 'com.capacitorjs:android:6.1.2'|implementation 'com.capacitorjs:android:6.1.2'\n    implementation 'com.google.android.gms:play-services-location:21.2.0'|" android/app/build.gradle
 
       - name: Copy custom icons into Android project
         run: |
