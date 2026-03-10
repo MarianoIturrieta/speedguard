@@ -40,7 +40,10 @@ jobs:
 
       - name: Add Google Play Services location dependency
         run: |
-          sed -i "s|implementation 'com.capacitorjs:android:6.1.2'|implementation 'com.capacitorjs:android:6.1.2'\n    implementation 'com.google.android.gms:play-services-location:21.2.0'|" android/app/build.gradle
+          echo "" >> android/app/build.gradle
+          echo "dependencies {" >> android/app/build.gradle
+          echo "    implementation 'com.google.android.gms:play-services-location:21.2.0'" >> android/app/build.gradle
+          echo "}" >> android/app/build.gradle
 
       - name: Copy custom icons into Android project
         run: |
