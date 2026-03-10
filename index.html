@@ -607,16 +607,29 @@ function setStatus(t){ statusEl.textContent=t; }
 // ─── Audio alert ──────────────────────────────────────────────────────────────
 function beep(){
   if(!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const g   = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  const osc  = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const g    = audioCtx.createGain();
+
+  // Dos osciladores graves + tipo triangle = más cálido, menos saturado
+  osc.type  = 'triangle';
+  osc2.type = 'triangle';
+  osc.frequency.setValueAtTime(220, audioCtx.currentTime);   // La3 — grave
+  osc2.frequency.setValueAtTime(330, audioCtx.currentTime);  // Mi4 — armónico
+
+  // Volumen más bajo para no saturar
   g.gain.setValueAtTime(0, audioCtx.currentTime);
-  g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.04);
-  g.gain.linearRampToValueAtTime(0,   audioCtx.currentTime + 0.22);
-  osc.connect(g); g.connect(audioCtx.destination);
+  g.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.06);
+  g.gain.linearRampToValueAtTime(0,    audioCtx.currentTime + 0.35);
+
+  osc.connect(g);
+  osc2.connect(g);
+  g.connect(audioCtx.destination);
+
   osc.start(audioCtx.currentTime);
-  osc.stop(audioCtx.currentTime + 0.25);
+  osc2.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.38);
+  osc2.stop(audioCtx.currentTime + 0.38);
 }
 function activateAlert(){
   if(alertOn || !audioCtx) return;
