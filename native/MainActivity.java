@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -14,11 +15,13 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
 
     private static final int REQ_LOCATION = 99;
+    private static final int REQ_BACKGROUND = 100;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        checkLocationPermission();
+        // Esperar 2 segundos para que el WebView cargue antes de pedir permisos
+        new Handler().postDelayed(this::checkLocationPermission, 2000);
     }
 
     private void checkLocationPermission() {
@@ -41,11 +44,12 @@ public class MainActivity extends BridgeActivity {
                     Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this,
-                    "Seleccioná 'Permitir todo el tiempo' para que funcione con la pantalla apagada",
+                    "Seleccioná 'Permitir todo el tiempo' para funcionar con pantalla apagada",
                     Toast.LENGTH_LONG).show();
-                ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                    REQ_LOCATION + 1);
+                new Handler().postDelayed(() ->
+                    ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                        REQ_BACKGROUND), 1500);
                 return;
             }
         }
