@@ -659,6 +659,28 @@ function dist(a,b,c,d){
   const x=Math.sin(dLat/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
+
+  // ─── Receptor de datos nativos (Android LocationService) ─────────────────────
+window.nativeLocation = function(coords) {
+  if (!running) return;
+  const kmh = Math.round((coords.speed ?? 0) * 3.6);
+  gpsDot.classList.add('active');
+  gpsLabel.textContent = 'GPS OK';
+  accEl.textContent = Math.round(coords.acc) + 'm';
+  roadEl.textContent = 'GPS nativo';
+  setSpeedUI(kmh);
+  updateDiff(kmh);
+  if (!lastLL || dist(coords.lat, coords.lon, lastLL.lat, lastLL.lon) > REDIST) {
+    lastLL = { lat: coords.lat, lon: coords.lon };
+    queryOSM(coords.lat, coords.lon);
+  }
+  if (cachedLimit !== null) {
+    kmh > cachedLimit ? activateAlert() : stopAlert();
+    setStatus(kmh > cachedLimit
+      ? `⚠ excedés el límite en ${kmh - cachedLimit} km/h`
+      : `dentro del límite · ${cachedLimit - kmh} km/h de margen`);
+  }
+};
 </script>
 </body>
 </html>
