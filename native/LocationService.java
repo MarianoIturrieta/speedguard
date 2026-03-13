@@ -22,6 +22,11 @@ public class LocationService extends Service {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     private static final String CHANNEL_ID = "SpeedGuardChannel";
+    public static final String ACTION_LOCATION = "com.mariano.speedguard.LOCATION_UPDATE";
+    public static final String EXTRA_SPEED = "speed";
+    public static final String EXTRA_LAT   = "lat";
+    public static final String EXTRA_LON   = "lon";
+    public static final String EXTRA_ACC   = "acc";
 
     @Override
     public void onCreate() {
@@ -32,9 +37,14 @@ public class LocationService extends Service {
             public void onLocationResult(LocationResult result) {
                 if (result == null) return;
                 for (Location loc : result.getLocations()) {
-                    // La velocidad llega al WebView via JavaScript
-                    float speedKmh = loc.getSpeed() * 3.6f;
-                    broadcastSpeed(speedKmh, loc.getLatitude(), loc.getLongitude());
+                    float kmh = loc.getSpeed() * 3.6f;
+                    // Broadcast para que MainActivity lo pase al WebView
+                    Intent intent = new Intent(ACTION_LOCATION);
+                    intent.putExtra(EXTRA_SPEED, kmh);
+                    intent.putExtra(EXTRA_LAT,   loc.getLatitude());
+                    intent.putExtra(EXTRA_LON,   loc.getLongitude());
+                    intent.putExtra(EXTRA_ACC,   loc.getAccuracy());
+                    sendBroadcast(intent);
                 }
             }
         };
@@ -65,14 +75,6 @@ public class LocationService extends Service {
         } catch (SecurityException e) {
             e.printStackTrace();
         }
-    }
-
-    private void broadcastSpeed(float kmh, double lat, double lon) {
-        Intent intent = new Intent("com.mariano.speedguard.LOCATION_UPDATE");
-        intent.putExtra("speed", kmh);
-        intent.putExtra("lat", lat);
-        intent.putExtra("lon", lon);
-        sendBroadcast(intent);
     }
 
     private void createNotificationChannel() {
